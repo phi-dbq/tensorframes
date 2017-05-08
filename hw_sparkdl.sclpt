@@ -1,0 +1,123 @@
+// -*- scala -*-
+
+// Must add the spark package bintray so that we can import packages
+import coursier.maven.MavenRepository
+interp.repositories() ++= Seq(
+  MavenRepository("https://dl.bintray.com/spark-packages/maven/")
+)
+// Load all packages into the session
+// REF: http://www.lihaoyi.com/Ammonite/#ImportedScriptsareRe-used
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
+import scala.util.Random
+
+// Load Spark settings
+import $exec.DevSparkEnv, DevSparkEnv._
+import $exec.DevDataSet, DevDataSet._
+import spark.implicits._
+import org.apache.spark.sql.types._
+
+/** TensorFlow Java */
+import $exec.DevTensorFlow, DevTensorFlow._
+
+/** Datatype for image column */
+val imageStruct = StructType(Seq(
+  StructField("mode", StringType, nullable = false),
+  StructField("height", IntegerType, nullable = false),
+  StructField("width", IntegerType, nullable = false),
+  StructField("nChannels", IntegerType, nullable = false),
+  StructField("data", BinaryType, nullable = false)
+))
+
+/** Load image dataframe */
+val dfImg = ImageDataSrc.load("car_images")  // from Tim's demo
+dfImg.select("image.nChannels").distinct.collect
+
+/** Load image classification model */
+val fpModelRoot = FPath.home / "local" / "data" / "tf_model"
+val fpIv3 = fpModelRoot / "inception-v3" / "main.pb"
+val fpIv3Preproc = fpModelRoot / "inception-v3" / "preprocessor.pb"
+
+// The high level API, enough to for building graphs
+val gfnMain = GraphFunction(
+  fpModelRoot / "inception-v3" / "main.pb",
+  inputNames = Seq("image_input"),
+  outputNames = Seq("prediction_vector")
+)
+
+val gfnPreproc = GraphFunction(
+  fpModelRoot / "inception-v3" / "preprocessor.pb",
+  inputNames = Seq("image_input"),
+  outputNames = Seq("output")
+)
+
+val builder = GraphBuilderSession()
+builder.importGraphFunction(gfnPreproc, Some("preproc"))
+builder.importGraphFunction(gfnMain, Some("inception"))
+
+builder.showOp("preproc/image_input")
+builder.showOp("inception/image_input")
+builder.showOp("inception/prediction_vector")
+
+
+// The lower level API, working directly on tf.Graph nodes and protobuf
+// Operations seem to be slower as we pull in all the node info
+// Read the bytes of the model
+val bytes = Files.readAllBytes(fpIv3)
+// Using the protocol buffer object, and it is somewhat slow
+val gdef = GraphDef.parseFrom(bytes)
+val nodes = gdef.getNodeList.asScala
+
+// All the placeholders must be filled
+val placeholders = nodes.filter { _.getOp == "Placeholder" }
+
+// We constructed the graph, where last element is the reflection of the output
+// Fields: name, op, input, attr
+val n = nodes.last
+n.getName
+
+val inputNodes = nodes.flatMap { _.getInputList.asScala }.toSet
+val outputNodes = nodes.map { _.getName }.toSet // all nodes are output nodes
+println(s"nodes without out-bound edge: ${outputNodes -- inputNodes}")
+n.getInputList.asScala
+
+println(s"TF Graph: #nodes ${nodes.size}")
+
+// Now execute some operation
+val shape = builder.op("preproc/image_input").output(0).shape
+val tnsrIn = tf.Tensor.create(
+  Array.fill[Float](shape.size(0).toInt)(Random.nextGaussian.toFloat)
+)
+val tnsrIn = tf.Tensor.create(
+  Array.ofDim[Byte](shape.size(0).toInt)
+)
+
+val fpImg = FPath.home / "local" / "data" / "images" / "cat.jpg"
+val tnsrImg = tf.Tensor.create(Files.readAllBytes(fpImg))
+
+// `Runner` has various input types for `feed`
+// https://www.tensorflow.org/api_docs/java/reference/org/tensorflow/Session.Runner
+val fetches = { 
+  val runner = builder.sess.runner()
+  val tnsrInterm = runner
+    .feed("preproc/image_input", tnsrImg)
+    .fetch("preproc/output")
+    .run().get(0)
+
+  runner
+    .feed("inception/image_input", tnsrInterm)
+    .fetch("inception/prediction_vector")  
+    .run().get(1)
+}
+val tnsrOut = fetches
+println(tnsrOut.numElements)
+
+// Create a buffer and export the result
+val buff = java.nio.FloatBuffer.wrap(
+  Array.ofDim[Float](tnsrOut.shape.head.toInt)
+)
+tnsrOut.writeTo(buff)
+val ss = buff.array
+
+// Inception input from image bytes
+//val input = g.opBuilder("Placeholder", "input").setAttr("dtype", ).build.output(0)
