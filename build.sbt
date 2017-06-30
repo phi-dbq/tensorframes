@@ -26,21 +26,19 @@ lazy val root = (project in file("."))
 lazy val sparkPackageSettings = Seq(
   sparkVersion := sparkVer,
   spName := "databricks/tensorframes",
-  version := s"0.2.8-phi-SNAPSHOT-spark$sparkBranch",
+  version := s"edge-SNAPSHOT-spark$sparkBranch",
   sparkComponents ++= Seq(
-    "core", "sql"
+    "core", "sql", "mllib"
   ),
   spAppendScalaVersion := true
 )
 
-lazy val sparkDependencies = Seq(
-  "core", "sql", "mllib"
-).map { mod =>
-  "org.apache.spark" %% s"spark-$mod" % sparkVer
-}
-
 lazy val replSettings = Seq(
-  libraryDependencies ++= sparkDependencies ++ Seq(
+  libraryDependencies ++= Seq(
+    "core", "sql", "mllib"
+  ).map { mod =>
+    "org.apache.spark" %% s"spark-$mod" % sparkVer
+  } ++ Seq(
     "com.lihaoyi" % s"ammonite_${scalaVersion.value}" % ammoniteVer,
     "org.scalameta" %% "scalameta" % "1.7.0"
   )

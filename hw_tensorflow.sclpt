@@ -1,0 +1,16 @@
+
+import $exec.DevDataSet, DevDataSet._
+import $exec.DevTensorFlow, DevTensorFlow._
+
+import TFOps.GraphFunction
+
+val modelRoot = FPath.home / "local" / "data" / "tf_model" 
+
+val iv3GFn = GraphFunction(
+  modelRoot / "inception-v3" / "main.pb", 
+  Seq("input"), Seq("output"))
+
+val resnetGFn = GraphFunction(
+  modelRoot / "faster_rcnn_resnet101_coco_11_06_2017" / "frozen_inference_graph.pb",
+  Seq("input"), Seq("output"))
+

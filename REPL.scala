@@ -9,7 +9,7 @@ import java.io.{File, InputStream, OutputStream}
 import ammonite.interp.Interpreter
 import ammonite.ops._
 import ammonite.runtime.{History, Storage}
-import ammonite.{ Main => AmmReplMain }
+import ammonite.{Main => AmmReplMain}
 import ammonite.main.Defaults
 import ammonite.repl.{Repl, ReplApiImpl, SessionApiImpl}
 import ammonite.util._
@@ -22,7 +22,7 @@ object ReplMain extends App {
     def scalaVersion = scala.util.Properties.versionNumberString
     def javaVersion = System.getProperty("java.version")
     Util.normalizeNewlines(
-      s"""phi9t databricks (amm $ammoniteVersion)
+      s"""tensorframes databricks (amm $ammoniteVersion)
           |(Scala $scalaVersion, Java $javaVersion)""".stripMargin
     )
   }

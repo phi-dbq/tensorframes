@@ -8,6 +8,8 @@
 
 import $exec.DevDataSet, DevDataSet._
 
+import scala.collection.JavaConverters._
+
 import org.{tensorflow => tf}
 import org.tensorflow.{framework => tfrm}
 import org.tensorflow.framework.{
@@ -43,7 +45,7 @@ object TFOps {
     }
   }
 
-  case class GraphBuilderSession(sess: tf.Session, g: tf.Graph) {
+  case class IsolatedSession(sess: tf.Session, g: tf.Graph) {
     def op(name: String): tf.Operation = {
       val op = g.operation(name)
       require(null != op, s"Graph operation [$name] not fouhnd")
@@ -71,30 +73,32 @@ object TFOps {
     def showOp(name: String): Unit = {
       val op = g.operation(name)
       require(null != op, s"Graph operation [$name] not fouhnd")
-      GraphBuilder.show(op)
+      tfx.show(op)
     }
   }
 
-  object GraphBuilderSession {
-
-    def apply(): GraphBuilderSession = apply(new tf.Graph())
-
-    def apply(g: tf.Graph): GraphBuilderSession = {
-      new GraphBuilderSession(new tf.Session(g), g)
-    }
-
-    def apply(gfn: GraphFunction): GraphBuilderSession = {
-      val g = new tf.Graph()
-      g.importGraphDef(gfn.gdef.toByteArray)
-      apply(g)
-    }
-
+  object tfx {
     def show(op: tf.Operation): Unit = {
       println(s"name: ${op.name}, #outputs: ${op.numOutputs}, type: ${op.`type`}")
         (0 until op.numOutputs).foreach { idx =>
           val tnsrOut = op.output(idx)
           println(tnsrOut.shape, tnsrOut.dataType)
         }
+    }
+  }
+
+  object IsolatedSession {
+
+    def apply(): IsolatedSession = apply(new tf.Graph())
+
+    def apply(g: tf.Graph): IsolatedSession = {
+      new IsolatedSession(new tf.Session(g), g)
+    }
+
+    def apply(gfn: GraphFunction): IsolatedSession = {
+      val g = new tf.Graph()
+      g.importGraphDef(gfn.gdef.toByteArray)
+      apply(g)
     }
   }
 }
