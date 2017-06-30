@@ -14,7 +14,7 @@ val defaultScalaTestVer = scalaVer match {
 val scalaMajorVersion = scalaVer.split(".").take(2).mkString(".")
 
 val protobufVer = "3.3.1"  // use protocol buffer, will be shaded
-val tensorflowVer = "1.2.0-rc2"
+val tensorflowVer = "1.2.1"
 val ammoniteVer = "0.9.9"
 
 lazy val root = (project in file("."))
