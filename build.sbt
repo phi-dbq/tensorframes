@@ -1,6 +1,5 @@
 // Default versions and dependcies
 val sparkVer = sys.props.getOrElse("spark.version", "2.1.1")
-val tfVer = "1.2.0-rc2"
 val sparkBranch = sparkVer.substring(0, 3)
 val defaultScalaVer = sparkBranch match {
   case "2.1" => "2.11.8"
@@ -34,13 +33,15 @@ lazy val sparkPackageSettings = Seq(
   spAppendScalaVersion := true
 )
 
+lazy val sparkDependencies = Seq(
+  "core", "sql", "mllib"
+).map { mod =>
+  "org.apache.spark" %% s"spark-$mod" % sparkVer
+}
+
 lazy val replSettings = Seq(
-  libraryDependencies ++= Seq(
+  libraryDependencies ++= sparkDependencies ++ Seq(
     "com.lihaoyi" % s"ammonite_${scalaVersion.value}" % ammoniteVer,
-    "org.apache.spark" %% "spark-core" % "2.1.1",
-    "org.apache.spark" %% "spark-sql" % "2.1.1",
-    "org.apache.spark" %% "spark-mllib" % "2.1.1",
-    "org.apache.spark" %% "spark-graphx" % "2.1.1",
     "org.scalameta" %% "scalameta" % "1.7.0"
   )
 )
@@ -125,37 +126,51 @@ lazy val commonSettings = devToolSettings ++ Seq(
   test in assembly := {}
 )
 
-lazy val nonShadedDependencies = Seq(
-  // Normal dependencies
-  ModuleID("org.apache.commons", "commons-proxy", "1.0"),
-  "org.scalactic" %% "scalactic" % "3.0.0",
-  "org.apache.commons" % "commons-lang3" % "3.4",
-  "com.typesafe.scala-logging" %% "scala-logging-api" % "2.1.2",
-  "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
-  // TensorFlow dependencies
-  "org.tensorflow" % "tensorflow" % targetTensorFlowVersion
-)
+// lazy val shadedDependencies = Seq(
+//   "com.google.protobuf" % "protobuf-java" % protobufVer
+// )
 
-lazy val shaded = project("shaded", file(".")).settings(
-  libraryDependencies ++= (dependenciesToShade ++
-    nonShadedDependencies.map(_ % "provided")), // don't include any other dependency in your assembly jar
-  target := target.value / "shaded", // have a separate target directory to make sbt happy
-  assemblyShadeRules in assembly := Seq(
-    ShadeRule.rename("blah.**" -> "bleh.@1").inAll
-  )
-) // add all other settings
+// lazy val nonShadedDependencies = Seq(
+//   // Normal dependencies
+//   ModuleID("org.apache.commons", "commons-proxy", "1.0"),
+//   "org.scalactic" %% "scalactic" % "3.0.0",
+//   "org.apache.commons" % "commons-lang3" % "3.4",
+//   "com.typesafe.scala-logging" %% "scala-logging-api" % "2.1.2",
+//   "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
+//   // TensorFlow dependencies
+//   "org.tensorflow" % "tensorflow" % tensorflowVer
+// )
 
-lazy val distribute = project("distribution", file(".")).settings(
-  spName := ... // your spark package name
-  target := target.value / "distribution",
-  spShade := true, // THIS IS THE MOST IMPORTANT SETTING
-  assembly in spPackage := (assembly in shaded).value, // this will pick up the shaded jar for distribution
-  libraryDependencies := nonShadedDependencies // have all your non shaded dependencies here so that we can
-                                               // generate a clean pom.
-) // add all other settings
+// lazy val shaded = (project in file("."))
+//   .settings(
+//     name := "shaded",
+//     libraryDependencies ++= nonShadedDependencies.map(_ % "provided"),
+//     libraryDependencies ++= sparkDependencies.map(_ % "provided"),
+//     libraryDependencies ++= shadedDependencies,
+//     libraryDependencies ++= testDependencies,
+//     //libraryDependencies ++= allPlatformDependencies,
+//     target := target.value / "shaded", // have a separate target directory to make sbt happy
+//     assemblyShadeRules in assembly := Seq(
+//       ShadeRule.rename("com.google.protobuf.**" -> "org.tensorframes.protobuf3shade.@1").inAll
+//     ),
+//     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
+//   ) // add all other settings
+
+// // lazy val distribute = (project in file("."))
+// //   .settings(
+// //     name := "distribution",
+// //     spName := "databricks/tensorframe",
+// //     target := target.value / "distribution",
+// //     // THIS IS THE MOST IMPORTANT SETTING
+// //     spShade := true, 
+// //     // this will pick up the shaded jar for distribution
+// //     assembly in spPackage := (assembly in shaded).value, 
+// //     // have all your non shaded dependencies here so that we can generate a clean pom
+// //     libraryDependencies := nonShadedDependencies
+// //   ) // add all other settings
 
 
-lazy val testDependencies = Seq(
-  // Test dependencies
-  "org.scalatest" %% "scalatest" % "3.0.0" % "test"
-)
+// lazy val testDependencies = Seq(
+//   // Test dependencies
+//   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
+// )
