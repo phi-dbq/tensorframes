@@ -6,11 +6,25 @@ import TFOps.GraphFunction
 
 val modelRoot = FPath.home / "local" / "data" / "tf_model" 
 
-val iv3GFn = GraphFunction(
-  modelRoot / "inception-v3" / "main.pb", 
-  Seq("input"), Seq("output"))
+// val iv3GFn = GraphFunction(
+//   modelRoot / "inception-v3" / "main.pb", 
+//   Seq("input"), Seq("output"))
 
+/**
+ * TensorFlow object detection library
+ * 
+ * https://github.com/derekjchow/models/tree/master/object_detection
+ */
 val resnetGFn = GraphFunction(
   modelRoot / "faster_rcnn_resnet101_coco_11_06_2017" / "frozen_inference_graph.pb",
-  Seq("input"), Seq("output"))
+  Seq("image_tensor"), 
+  Seq("detection_boxes", "detection_scores", "detection_classes", "num_detections"))
 
+val nodes = resnetGFn.getNodeDict
+val opTypes = nodes.map { _._2.getOp }.toSet
+val placeholders = nodes.filter { case (name, node) =>
+  "Placeholder" == node.getOp
+}
+val detections = nodes.filter { case (name, node) =>
+  name.startsWith("detection_") || name.endsWith("_detections")
+}

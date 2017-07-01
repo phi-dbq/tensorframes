@@ -37,6 +37,7 @@ object TFOps {
     def node(name: String): tfrm.NodeDef = {
       nodeDict.getOrElse(name, throw new IllegalArgumentException("no op found"))
     }
+    def getNodeDict = nodeDict
   }
 
   object GraphFunction {
