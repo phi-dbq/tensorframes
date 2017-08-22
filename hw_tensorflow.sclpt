@@ -25,6 +25,7 @@ val opTypes = nodes.map { _._2.getOp }.toSet
 val placeholders = nodes.filter { case (name, node) =>
   "Placeholder" == node.getOp
 }
+val imageInput = placeholders.head._2
 val detections = nodes.filter { case (name, node) =>
   name.startsWith("detection_") || name.endsWith("_detections")
 }
