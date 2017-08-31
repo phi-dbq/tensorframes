@@ -3,15 +3,15 @@ import sbt.Keys._
 import sbtsparkpackage.SparkPackagePlugin.autoImport._
 import sbtassembly._
 import sbtassembly.AssemblyKeys._
-import sbtassembly.AssemblyPlugin.autoImport.{ShadeRule => _, assembly => _, assemblyExcludedJars => _, assemblyOption => _, assemblyShadeRules => _, _}
+import sbtassembly.AssemblyPlugin.autoImport.{ShadeRule => _, assembly => _,
+  assemblyExcludedJars => _, assemblyOption => _, assemblyShadeRules => _, _}
 
 object Shading extends Build {
 
   import Dependencies._
 
-
   lazy val commonSettings = Seq(
-    version := "0.2.9-rc3",
+    version := "0.2.9-strip",
     name := "tensorframes",
     scalaVersion := sys.props.getOrElse("scala.version", "2.11.8"),
     organization := "databricks",
@@ -22,7 +22,7 @@ object Shading extends Build {
     javaOptions in run += "-Xmx6G",
     // Add all the python files in the final binary
     unmanagedResourceDirectories in Compile += {
-      baseDirectory.value / "src/main/python/"
+      baseDirectory.value / "src" / "main" / "python"
     },
     // Spark packages does not like this part
     test in assembly := {}
@@ -60,7 +60,9 @@ object Shading extends Build {
   )
 
   lazy val shadedDependencies = Seq(
-    "com.google.protobuf" % "protobuf-java" % "3.2.0"
+    // TODO: check pairing protobuf version
+    "org.tensorflow" % "proto" % targetTensorFlowVersion,
+    "com.google.protobuf" % "protobuf-java" % "3.3.0"
   )
 
   lazy val shaded = Project("shaded", file(".")).settings(
@@ -83,8 +85,8 @@ object Shading extends Build {
   lazy val distribute = Project("distribution", file(".")).settings(
     target := target.value / "distribution",
     libraryDependencies := nonShadedDependencies,
+    libraryDependencies ++= shadedDependencies.map(_ % "provided"), // must mark these as provided
     libraryDependencies ++= sparkDependencies.map(_ % "provided"),
-    libraryDependencies ++= testDependencies,
     spName := "databricks/tensorframes",
     spShortDescription := "TensorFlow wrapper for DataFrames on Apache Spark",
     spDescription := {
@@ -101,7 +103,7 @@ object Shading extends Build {
           |
       """.stripMargin
     },
-    spAppendScalaVersion := true,
+    spAppendScalaVersion := false,
     spHomepage := "https://github.com/databricks/tensorframes",
     spShade := true,
     assembly in spPackage := (assembly in shaded).value,
