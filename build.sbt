@@ -138,7 +138,7 @@ lazy val shaded = (project in file(".shaded"))
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
   ) // add all other settings
 
-lazy val distribute = (project in file(".distribute"))
+lazy val distribute = (project in file("."))
   .settings(
     name := "distribution",
     spName := "databricks/tensorframe",
