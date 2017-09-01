@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import tensorflow as tf
 import numpy as np
 import logging
@@ -77,7 +79,7 @@ def _add_shapes(graph, builder, fetches):
     ph_shapes = []
     for n in graph.as_graph_def(add_shapes=True).node:
         # Just the input nodes:
-        if not n.input:
+        if not n.input and n.op == 'Placeholder':
             op_name = n.name
             # Simply get the default output for now, assume that the nodes have only one output
             t = graph.get_tensor_by_name(op_name + ":0")
@@ -127,6 +129,9 @@ def _unpack_row(jdf, fetches):
 def _add_inputs(builder, start_dct, ph_names):
     """
     Combines a dictionary (supplied by the user) with some extra placeholder names.
+
+    :param: start_dct, dict, mapping tensor names to column names
+    :param: ph_names, list, placeholder names in the graph
     """
     if start_dct is None:
         start_dct = {}
@@ -135,10 +140,10 @@ def _add_inputs(builder, start_dct, ph_names):
         if ph_name not in dct:
             dct[ph_name] = ph_name
     dct_items = dct.items()
-    input_names = [ph_name for (ph_name, field_name) in dct_items]
-    field_names = [field_name for (ph_name, field_name) in dct_items]
+    input_names, field_names = zip(*dct_items)
     logger.info("inputs: %s %s", str(input_names), str(field_names))
     builder.inputs(input_names, field_names)
+
 
 def _map(fetches, dframe, feed_dict, block, trim, initial_variables=_initial_variables_default):
     fetches = _check_fetches(fetches)
@@ -307,7 +312,6 @@ def map_blocks(fetches, dframe, feed_dict=None, trim=False, initial_variables=_i
     :param dframe: a Spark DataFrame or a pandas DataFrame
     :return: a Spark DataFrame or a pandas DataFrame
     """
-    # TODO: add feed dictionary
     if isinstance(dframe, pd.DataFrame):
         return _map_pd(fetches, dframe, feed_dict=feed_dict, block=False, trim=None, initial_variables=initial_variables)
     return _map(fetches, dframe, feed_dict=feed_dict, block=True, trim=trim, initial_variables=initial_variables)
