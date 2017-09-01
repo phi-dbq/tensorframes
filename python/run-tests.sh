@@ -88,7 +88,12 @@ export TF_CPP_MIN_LOG_LEVEL=2  # Warning level
 # Run test suites
 
 
-$PYSPARK_DRIVER_PYTHON -m "nose" -v  --exe --all-modules "$PROJECT_HOME/src/main/python/tensorframes/sql_test.py" 2>&1 | grep -vE "INFO (ParquetOutputFormat|SparkContext|ContextCleaner|ShuffleBlockFetcherIterator|MapOutputTrackerMaster|TaskSetManager|Executor|MemoryStore|CacheManager|BlockManager|DAGScheduler|PythonRDD|TaskSchedulerImpl|ZippedPartitionsRDD2)";
+$PYSPARK_DRIVER_PYTHON \
+    -m "nose" \
+    --nocapture --nologcapture \
+    -v  --exe --all-modules \
+        "$PROJECT_HOME/src/main/python/tensorframes/sql_test.py" \
+        2>&1 | grep -vE "INFO (ParquetOutputFormat|SparkContext|ContextCleaner|ShuffleBlockFetcherIterator|MapOutputTrackerMaster|TaskSetManager|Executor|MemoryStore|CacheManager|BlockManager|DAGScheduler|PythonRDD|TaskSchedulerImpl|ZippedPartitionsRDD2)";
 
 # Exit immediately if the tests fail.
 # Since we pipe to remove the output, we need to use some horrible BASH features:
